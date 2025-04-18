@@ -1,5 +1,5 @@
 ---
-title: "6.ggplot_advance_exercise_Nguyen"
+title: "6.Interactive and animation plot_exercise"
 author: "Nguyen Truong"
 date: "2025-04-16"
 output: 
