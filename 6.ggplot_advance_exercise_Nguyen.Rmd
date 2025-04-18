@@ -108,7 +108,7 @@ grid.arrange(p1, p2, nrow = 1)  #using gridExtra package
 plot_grid(p1, p2)  #using cowplot package
 ```
 ##Exercise 2
-using data2, visualize the number of hospitalizations over time in the 3 main regions of Belgium. Make sure the 3 regions are separated in 3 facets and give each line (for each region) a manual color! (pick your favorite colors)
+using data2, visualize the number of hospitalizations over time in the 3 main regions of Belgium. Make sure the 3 regions are separated in 3 facets and *give each line (for each region) a manual color!* (pick your favorite colors)
 ```{r}
 ggplot(data = data2, aes(x = date, y = hosp, col = administrative_area_level_2)) +
   geom_line() +
@@ -123,8 +123,120 @@ ggplot(data = data2, aes(x = date, y = hosp/population, col = administrative_are
   scale_color_manual(values = c("red", "green", "blue")) +
   labs(y = "Rate of hospitalizazion") +
   theme_bw()
+```
 
+##Exercise3
+For this visualization first recreate a similar plot as in exercise 2 (you should be able to recycle most of your earlier code). However this time, color by region, do not use facets, and make sure *the y-axis shows number of hospitalizations over the regional population size*. The latter makes the values more comparable between regions.
 
+Now transform your ggplot in an *interactive plot* and add the following additional tooltips: (1) Total number of hospitalizations, (2) regional population size, (3) any other number of variables that are of interest to you (e.g. restrictions) (Tip: group=administrative_area_level_2 )
+```{r}
+ggplot(data = data2, aes(x = date, y = hosp/population, col = administrative_area_level_2)) +
+  geom_line() +
+  labs(y = "Number of hospitalization/Regional population",
+       title = "Hospitalization in Belgium") +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +   #presenting each month&year on the x-axis
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))   #adjust the angle of text on the x-axis
+  scale_colour_manual(values = c("red", "green", "blue"))    #manually adjust the color of the lines
 
+#create interactive plot using ggplot and ggplotly
+p3 <- ggplot(data = data2, aes(x = date, y = hosp/population, col = administrative_area_level_2,
+                               text = paste0("Total_number_hosp.: ",hosp,"\nReg_pop: ",population,"\nDeaths: ",deaths))) +
+  geom_line(size = 1, aes(group = administrative_area_level_2)) +
+  labs(y = "Number of hospitalization/Regional population",
+       title = "Hospitalization in Belgium") +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +   #presenting each month&year on the x-axis
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +   #adjust the angle of text on the x-axis
+  scale_colour_manual(values = c("red", "green", "blue"))    #manually adjust the color of the lines
+ggplotly(p3)
+
+#create interactive plot using syntax in plot-ly package
+plot_ly(data = data2, x = ~date, y = ~hosp/population, type = "scatter", mode = "lines",
+        color = ~as.factor(administrative_area_level_2),   #separate lines by region with separate color
+        colors = c("red", "green", "blue"),     #add colors manually
+        text = ~paste0("Total_number_hosp.: ",hosp,"\nReg_pop: ",population,"\nDeaths: ",deaths)) %>%
+  layout(title = "Hospitalization in Belgium",
+         y = "Number of hospitalization/Regional population")
+
+```
+
+##Exercise4: 
+Use the static plot of exercise 3 and animate it however you see fit following one of the approaches in the course slides. You do not need to stick to the line plot.
+```{r}
+p4 <- ggplot(data = data2, aes(x = date, y = hosp/population, col = administrative_area_level_2)) +
+  geom_line(size = 0.5) +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +   #presenting each month&year on the x-axis
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +  #adjust the angle of text on the x-axis
+  scale_colour_manual(values = c("red", "green", "blue"))  +   #manually adjust the color of the lines
+  transition_reveal(date) +
+  labs(y = "Number of Hospitalizations / Regional Population Size",
+    title = "Hospitalization in Belgium: {frame_along}")
+
+#saving animation plot
+animate(p4, width = 800, height = 400)
+save_animation(animation = last_animation(), file = "/Users/osx/Desktop/Data science/R program/6.Exercise_animationplot1.gif")
+```
+
+##Exercise5: 
+From scratch, use `data3` to create a plot that shows the **deaths per 100.000 people for every week** over time for all of the included countries (Belgium, Czech Republic, France, Germany, Netherlands, United Kingdom). Either make this plot interactive by adding tooltips or animate with your favorite animation.  
+You will need to do some data manipulation to add the daily deaths and the weekly deaths per 100.000. If you get stuck here, don't be afraid to head over to your best friend google/stackoverflow to find an easy/creative solution.
+```{r}
+str(data3)
+dt <- data3 %>%
+  mutate(week = floor_date(date, "week"))
+dt
+
+dt <- dt %>% 
+  group_by(administrative_area_level_1, week) %>%
+  mutate(
+    deaths_week = sum(deaths, na.rm = TRUE),
+    deaths_week_per100000 = (deaths_week/population)*100000
+    ) %>%
+  ungroup()
+dt
+
+#interactive plot with line chart using plotly
+ggplot(data = dt, aes(x = date, y = deaths_week_per100000, col = administrative_area_level_1)) +
+  geom_line(size = 0.5) +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(y = "Weekly dealths per 100000 people",
+       title = "Weekly dealths per 100000 people over time")
+
+p5 <- ggplot(data = dt, aes(x = date, y = deaths_week_per100000, col = administrative_area_level_1,
+                            text = paste0("population: ",population,"\nhospitalization: ",hosp))) +
+  geom_line(size = 0.5, aes(group = administrative_area_level_1)) +     #need group to make plotly understand to separate plots according to countries
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(y = "Weekly dealths per 100000 people",
+       title = "Weekly dealths per 100000 people over time")
+p5  
+ggplotly(p5)
+
+#animation plot with transition_reveal
+ggplot(data = dt, aes(x = date, y = deaths_week_per100000, col = administrative_area_level_1)) +
+  geom_line(size = 0.5) +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  transition_reveal(date) +
+  labs(y = "Weekly dealths per 100000 people",
+       title = "Weekly dealths per 100000 people over time: {frame_along}") 
+  
+#animation plot with transition_states
+ggplot(data = dt, aes(x = date, y = deaths_week_per100000, col = administrative_area_level_1)) +
+  geom_line(size = 0.5) +
+  theme_bw() +
+  scale_x_date(date_breaks = "1 month", date_labels = format("%B %Y")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  transition_states(administrative_area_level_1, transition_length = 4) +    #transition_length: time to transfer between lines
+  labs(y = "Weekly dealths per 100000 people",
+       title = "Weekly dealths per 100000 people over time each country: {closest_state}") +
+  enter_fade() +
+  exit_shrink()
 ```
 
