@@ -238,5 +238,15 @@ ggplot(data = dt, aes(x = date, y = deaths_week_per100000, col = administrative_
        title = "Weekly dealths per 100000 people over time each country: {closest_state}") +
   enter_fade() +
   exit_shrink()
+
+#another way to draw the calculate the *weekly deaths per 100000 people*
+# Add daily deaths (the same as daily confirmed was added above)
+dt1 <- data3 %>% arrange(date) %>% group_by(administrative_area_level_1) %>% mutate(deaths_daily=c(.data$deaths[1],diff(deaths))) %>% ungroup()   #diff(): calculate the difference between rows. That means a matrix with N rows produces N-1 difference, so we add c(.data$deaths[1],diff(deaths)) meaning that the first row as the value of deaths
+
+# Add a date_weeks variable that is the first day at the beginning of every week. We use the round_date() function from the lubridate package for this.
+# Then, we summarize the daily deaths over date_week
+dt1 <- dt1 %>% mutate(date_week = lubridate::round_date(date,"week")) %>% 
+  group_by(administrative_area_level_1, date_week) %>%
+  mutate(deaths_week = sum(deaths_daily)) 
 ```
 
